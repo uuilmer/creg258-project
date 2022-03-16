@@ -11,7 +11,7 @@
     "webpack"
   ],
   "scripts": {
-    "start": "webpack serve",
+    "start": "node .",
     "prebuild": "rimraf ./build && mkdir ./build",
     "build": "webpack --mode production"
   },
@@ -34,6 +34,6 @@
     "webpack-dev-server": "^4.7.3"
   },
   "engines": {
-    "node": ">=8.0.0"
+    "node": "16.14.1"
   }
 }
