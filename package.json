@@ -2,6 +2,7 @@
   "name": "creg-258",
   "version": "0.4.0",
   "description": "Three.js starter project boilerplate bundled with webpack",
+  "main": "backend/index.js",
   "keywords": [
     "webgl",
     "boilerplate",
@@ -15,7 +16,10 @@
     "build": "webpack --mode production"
   },
   "dependencies": {
+    "express": "^4.17.3",
+    "path-parse": "^1.0.7",
     "three": "^0.137.5",
+    "util": "^0.12.4",
     "webpack-cli": "^4.9.2"
   },
   "devDependencies": {

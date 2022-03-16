@@ -19,6 +19,116 @@ var tmpQuar = { real: 0, i: 0, j: 0, k: 0 };
 
 var quaternion = new THREE.Quaternion();
 
+var interfaceNumber;
+var endpointOut;
+var endpointIn;
+
+var runningInputVariable = "";
+var newUSBGyroscope = [];
+var lastUpdate;
+
+var stall = false;
+
+var button = document.createElement("button");
+button.innerHTML = "click me";
+button.onclick = function () {
+  navigator.usb.requestDevice({ filters: [] }).then(function (device) {
+    console.log(device);
+
+    let readLoop = () => {
+      device.transferIn(endpointIn, 32).then(
+        (result) => {
+          var rawInput = new TextDecoder().decode(result.data);
+          for (var c of [...rawInput]) {
+            if (c == ",") {
+              newUSBGyroscope.push(
+                parseFloat(runningInputVariable) * (Math.PI / 180)
+              );
+              updateUSBQuaterion();
+              runningInputVariable = "";
+              newUSBGyroscope = [];
+            } else if (c == " ") {
+              newUSBGyroscope.push(
+                parseFloat(runningInputVariable) * (Math.PI / 180)
+              );
+              runningInputVariable = "";
+            } else {
+              runningInputVariable = runningInputVariable.concat(c);
+            }
+          }
+          readLoop();
+        },
+        (error) => {
+          console.log(error);
+        }
+      );
+    };
+
+    device
+      .open()
+      .then(() => {
+        if (device.configuration === null) {
+          return device.selectConfiguration(1);
+        }
+      })
+      .then(() => {
+        var interfaces = device.configuration.interfaces;
+        var element = interfaces[2];
+        element.alternates.forEach((elementalt) => {
+          if (elementalt.interfaceClass == 0xff) {
+            interfaceNumber = element.interfaceNumber;
+            elementalt.endpoints.forEach((elementendpoint) => {
+              if (elementendpoint.direction == "out") {
+                endpointOut = elementendpoint.endpointNumber;
+              }
+              if (elementendpoint.direction == "in") {
+                endpointIn = elementendpoint.endpointNumber;
+              }
+            });
+          }
+        });
+      })
+      .then(() => device.claimInterface(interfaceNumber))
+      .then(() => device.selectAlternateInterface(interfaceNumber, 0))
+      .then(() =>
+        device.controlTransferOut({
+          requestType: "class",
+          recipient: "interface",
+          request: 0x22,
+          value: 0x01,
+          index: interfaceNumber,
+        })
+      )
+      .then(() => {
+        readLoop();
+      });
+
+    var button2 = document.createElement("button");
+    button2.innerHTML = "read";
+    button2.onclick = function () {
+      if (device.opened) {
+        var enc = new TextEncoder(); // always utf-8
+        var promise = device.transferOut(
+          endpointOut,
+          enc.encode("Test message")
+        );
+        promise.then(function (res) {
+          console.log("lmao sent");
+          console.log(res);
+        });
+      }
+      return false;
+    };
+    document.body.appendChild(button2);
+  });
+  return false;
+};
+
+// where do we want to have the button to appear?
+// you can append it to another element just by doing something like
+// document.getElementById('foobutton').appendChild(button);
+document.body.appendChild(button);
+
 // scene
 scene.add(seedScene);
 
@@ -31,26 +141,50 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x7ec0ee, 1);
 
 const updateUSBQuaterion = () => {
-  var usbQuarterion = {};
+  if (lastUpdate) {
+    var dt = Date.now() / 1000 - lastUpdate;
+  } else {
+    var dt = 0.1;
+  }
 
-  usbQuarterion.real = tmpQuar.real;
-  usbQuarterion.i = tmpQuar.i;
-  usbQuarterion.j = tmpQuar.j;
-  usbQuarterion.k = tmpQuar.k;
-  // TODO: Retrieve new Quarterion via USB
+  var USBGyroscope = {
+    x: newUSBGyroscope[0],
+    y: newUSBGyroscope[1],
+    z: newUSBGyroscope[2],
+  };
 
-  quaternion.set(
-    usbQuarterion.real,
-    usbQuarterion.i,
-    usbQuarterion.j,
-    usbQuarterion.k
+  var magnitude = Math.sqrt(
+    USBGyroscope.x * USBGyroscope.x +
+      USBGyroscope.y * USBGyroscope.y +
+      USBGyroscope.z * USBGyroscope.z
   );
+
+  var theta = magnitude * dt;
+
+  USBGyroscope.x /= magnitude;
+  USBGyroscope.y /= magnitude;
+  USBGyroscope.z /= magnitude;
+
+  var USBQuarternion = new THREE.Quaternion(
+    USBGyroscope.x * Math.sin(theta / 2),
+    USBGyroscope.y * Math.sin(theta / 2),
+    USBGyroscope.z * Math.sin(theta / 2),
+    Math.cos(theta / 2)
+  );
+
+  USBQuarternion.normalize();
+
+  quaternion.multiplyQuaternions(quaternion, USBQuarternion);
   //quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
 
   quaternion.normalize();
 
   // Apply orientation to seedScene
   seedScene.quaternion.copy(quaternion);
+
+  console.log("Updated!");
+
+  lastUpdate = Date.now() / 1000;
 };
 
 const updateUSBPosition = () => {
@@ -66,7 +200,6 @@ const updateUSBPosition = () => {
 
 // render loop
 const onAnimationFrameHandler = (timeStamp) => {
-  updateUSBQuaterion();
   updateUSBPosition();
 
   renderer.render(scene, camera);
@@ -84,106 +217,6 @@ const windowResizeHanlder = () => {
 };
 windowResizeHanlder();
 window.addEventListener("resize", windowResizeHanlder);
-
-// START TRASH
-
-var btn = document.createElement("button");
-btn.innerHTML = "x+";
-btn.onclick = function () {
-  tmpPos.x++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "x-";
-btn.onclick = function () {
-  tmpPos.x--;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "y+";
-btn.onclick = function () {
-  tmpPos.y++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "y-";
-btn.onclick = function () {
-  tmpPos.y--;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "z+";
-btn.onclick = function () {
-  tmpPos.z++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "z-";
-btn.onclick = function () {
-  tmpPos.z--;
-};
-document.body.appendChild(btn);
-
-var btn = document.createElement("button");
-btn.innerHTML = "real+";
-btn.onclick = function () {
-  tmpQuar.real++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "real-";
-btn.onclick = function () {
-  tmpQuar.real--;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "i+";
-btn.onclick = function () {
-  tmpQuar.i++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "i-";
-btn.onclick = function () {
-  tmpQuar.i--;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "j+";
-btn.onclick = function () {
-  tmpQuar.j++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "j-";
-btn.onclick = function () {
-  tmpQuar.j--;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "k+";
-btn.onclick = function () {
-  tmpQuar.k++;
-};
-document.body.appendChild(btn);
-
-btn = document.createElement("button");
-btn.innerHTML = "k-";
-btn.onclick = function () {
-  tmpQuar.k--;
-};
-document.body.appendChild(btn);
 
 // dom
 document.body.style.margin = 0;
