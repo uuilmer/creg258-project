@@ -7,9 +7,9 @@ module.exports = {
   entry: ["./src/entry.js"],
   output: {
     path: path.join(__dirname, buildPath),
-    filename: "[name].[hash].js",
+    filename: "[name].[fullhash].js",
   },
-  mode: "development",
+  mode: "production",
   target: "web",
   devtool: "source-map",
   module: {
@@ -20,7 +20,18 @@ module.exports = {
         exclude: path.resolve(__dirname, "./node_modules/"),
       },
       {
-        test: /\.(jpe?g|png|gif|svg|tga|glb|babylon|mtl|pcb|pcd|prwm|obj|mat|mp3|ogg)$/i,
+        test: /\.(glb|gltf)$/,
+        use: [
+          {
+            loader: "file-loader",
+            options: {
+              outputPath: "assets/models/",
+            },
+          },
+        ],
+      },
+      {
+        test: /\.(jpe?g|png|gif|svg|tga|babylon|mtl|pcb|pcd|prwm|obj|mat|mp3|ogg)$/i,
         use: "file-loader",
         exclude: path.resolve(__dirname, "./node_modules/"),
       },
