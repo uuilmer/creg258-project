@@ -148,7 +148,6 @@ const updateUSBQuaterion = () => {
     y: (newUSBGyroscope[1] * Math.PI) / 180,
     z: (newUSBGyroscope[2] * Math.PI) / 180,
   };
-  console.log(USBGyroscope);
 
   var magnitude = Math.sqrt(
     USBGyroscope.x * USBGyroscope.x +
