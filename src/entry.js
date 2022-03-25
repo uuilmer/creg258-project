@@ -172,17 +172,15 @@ const updateUSBQuaterion = () => {
     Math.cos(theta / 2)
   );
 
-  USBQuarternion.normalize();
+  //USBQuarternion.normalize();
 
-  quaternion.multiplyQuaternions(quaternion, USBQuarternion);
+  quaternion.multiplyQuaternions(USBQuarternion, quaternion);
   //quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
 
   quaternion.normalize();
 
   // Apply orientation to seedScene
   seedScene.quaternion.copy(quaternion);
-
-  console.log("Updated!");
 
   lastUpdate = Date.now() / 1000;
 };
