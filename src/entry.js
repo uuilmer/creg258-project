@@ -41,16 +41,12 @@ button.onclick = function () {
           var rawInput = new TextDecoder().decode(result.data);
           for (var c of [...rawInput]) {
             if (c == ",") {
-              newUSBGyroscope.push(
-                parseFloat(runningInputVariable) * (Math.PI / 180)
-              );
+              newUSBGyroscope.push(parseFloat(runningInputVariable));
               updateUSBQuaterion();
               runningInputVariable = "";
               newUSBGyroscope = [];
             } else if (c == " ") {
-              newUSBGyroscope.push(
-                parseFloat(runningInputVariable) * (Math.PI / 180)
-              );
+              newUSBGyroscope.push(parseFloat(runningInputVariable));
               runningInputVariable = "";
             } else {
               runningInputVariable = runningInputVariable.concat(c);
@@ -148,10 +144,11 @@ const updateUSBQuaterion = () => {
   }
 
   var USBGyroscope = {
-    x: newUSBGyroscope[0],
-    y: newUSBGyroscope[1],
-    z: newUSBGyroscope[2],
+    x: (newUSBGyroscope[0] * Math.PI) / 180 - 0.1,
+    y: (newUSBGyroscope[1] * Math.PI) / 180,
+    z: (newUSBGyroscope[2] * Math.PI) / 180,
   };
+  console.log(USBGyroscope);
 
   var magnitude = Math.sqrt(
     USBGyroscope.x * USBGyroscope.x +
@@ -172,7 +169,7 @@ const updateUSBQuaterion = () => {
     Math.cos(theta / 2)
   );
 
-  //USBQuarternion.normalize();
+  USBQuarternion.normalize();
 
   quaternion.multiplyQuaternions(USBQuarternion, quaternion);
   //quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
