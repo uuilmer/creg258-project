@@ -6,7 +6,7 @@
 
 /* Constants for use with receiver */
 // Pins that we connected to CE and CSN of the receiver
-RF24 radio(6, 7);
+RF24 radio(0, 6);
 // Address that must be matching with receivere for a connection
 const byte address[6] = "00001";
 // Buffer containing messages we wish to send
@@ -39,7 +39,7 @@ void setup()
  */
 void setupRadioHelper()
 {
-    if (radio.begin(6, 7))
+    if (radio.begin(0, 6))
     {
         Serial.println("Connected to receiver...");
         // Indicate a physical successful receiver connection

@@ -13,7 +13,8 @@
   "scripts": {
     "start": "node .",
     "prebuild": "rimraf ./build && mkdir ./build",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "go": "npm run prebuild && npm run build && npm start"
   },
   "dependencies": {
     "express": "^4.17.3",
