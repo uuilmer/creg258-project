@@ -6,11 +6,11 @@
 
 /* Constants for use with receiver */
 // Pins that we connected to CE and CSN of the receiver
-RF24 radio(0, 6);
+RF24 radio(6, 7);
 // Address that must be matching with receivere for a connection
 const byte address[6] = "00001";
-// Buffer containing messages we wish to send
-char ReceivedGyroscopeReading[1] = {'0'};
+// Buffer containing messages we wish to receive
+char ReceivedGyroscopeReading[8];
 
 // LED that we will use to indicate proper connection to the receiver
 #define LED 2
@@ -26,6 +26,7 @@ WEBUSB_URL_DEF(landingPage, 1 /*http*/, "compe-capstone.herokuapp.com/");
  */
 void setup()
 {
+    Serial.begin(115200);
     // Setup LED indicator
     pinMode(LED, OUTPUT);
 
@@ -39,7 +40,7 @@ void setup()
  */
 void setupRadioHelper()
 {
-    if (radio.begin(0, 6))
+    if (radio.begin(6, 7))
     {
         Serial.println("Connected to receiver...");
         // Indicate a physical successful receiver connection
@@ -83,6 +84,6 @@ void loop()
     if (radio.available())
     {
         radio.read(ReceivedGyroscopeReading, sizeof(ReceivedGyroscopeReading));
-        usb_web.write(ReceivedGyroscopeReading[0]);
+        usb_web.write(ReceivedGyroscopeReading, sizeof(ReceivedGyroscopeReading));
     }
 }

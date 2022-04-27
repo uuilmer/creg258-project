@@ -31,7 +31,6 @@ var button = document.createElement("button");
 button.innerHTML = "click me";
 button.onclick = function () {
   navigator.usb.requestDevice({ filters: [] }).then(function (device) {
-
     let readLoop = () => {
       device.transferIn(endpointIn, 32).then(
         (result) => {
@@ -43,6 +42,7 @@ button.onclick = function () {
               runningInputVariable = "";
               newUSBGyroscope = [];
             } else if (c == " ") {
+              console.log(runningInputVariable);
               newUSBGyroscope.push(parseFloat(runningInputVariable));
               runningInputVariable = "";
             } else {
@@ -141,15 +141,15 @@ const updateUSBQuaterion = () => {
   }
 
   var usbPosition = {
-    x: newUSBGyroscope[0],
-    y: newUSBGyroscope[1],
-    z: newUSBGyroscope[2],
+    x: newUSBGyroscope[2] / 100,
+    y: newUSBGyroscope[1] / 100,
+    z: newUSBGyroscope[0] / 50,
   };
 
   var USBGyroscope = {
-    x: (newUSBGyroscope[3] * Math.PI) / 180 - 0.258,
-    y: (newUSBGyroscope[4] * Math.PI) / -180 - 0.055,
-    z: (newUSBGyroscope[5] * Math.PI) / 180 + 0.0055,
+    x: ((newUSBGyroscope[3] - 1.3) * Math.PI) / 180,
+    z: ((newUSBGyroscope[4] + 0.4) * Math.PI) / 180,
+    y: ((newUSBGyroscope[5] - 1.7) * Math.PI) / 180,
   };
 
   var magnitude = Math.sqrt(
@@ -187,7 +187,6 @@ const updateUSBQuaterion = () => {
 
 // render loop
 const onAnimationFrameHandler = (timeStamp) => {
-
   renderer.render(scene, camera);
   seedScene.update && seedScene.update(timeStamp);
   window.requestAnimationFrame(onAnimationFrameHandler);

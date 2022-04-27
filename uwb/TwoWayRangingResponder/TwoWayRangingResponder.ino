@@ -4,9 +4,9 @@
 #include <DW1000NgRanging.hpp>
 
 // connection pins
-const uint8_t PIN_RST = 9; // reset pin
-const uint8_t PIN_IRQ = 2; // irq pin
-const uint8_t PIN_SS = SS; // spi select pin
+const uint8_t PIN_RST = 1; // reset pin
+const uint8_t PIN_IRQ = 7; // irq pin
+const uint8_t PIN_SS = 2; // spi select pin
 
 #define POLL 0
 #define POLL_ACK 1
@@ -35,9 +35,9 @@ uint64_t timeComputedRange;
 byte data[LEN_DATA];
 // watchdog and reset period
 uint32_t lastActivity;
-uint32_t resetPeriod = 250;
+uint32_t resetPeriod = 100;
 // reply times (same on both sides for symm. ranging)
-uint16_t replyDelayTimeUS = 3000;
+uint16_t replyDelayTimeUS = 1000;
 // ranging counter (per second)
 uint16_t successRangingCount = 0;
 uint32_t rangingCountPeriod = 0;
@@ -49,10 +49,10 @@ device_configuration_t DEFAULT_CONFIG = {
     true,
     true,
     false,
-    SFDMode::STANDARD_SFD,
+    SFDMode::DECAWAVE_SFD,
     Channel::CHANNEL_5,
-    DataRate::RATE_850KBPS,
-    PulseFrequency::FREQ_16MHZ,
+    DataRate::RATE_6800KBPS,
+    PulseFrequency::FREQ_64MHZ,
     PreambleLength::LEN_256,
     PreambleCode::CODE_3
 };
@@ -68,7 +68,6 @@ interrupt_configuration_t DEFAULT_INTERRUPT_CONFIG = {
 void setup() {
     // DEBUG monitoring
     Serial.begin(115200);
-    delay(1000);
     Serial.println(F("### DW1000Ng-arduino-ranging-anchor ###"));
     // initialize the driver
     DW1000Ng::initialize(PIN_SS, PIN_IRQ, PIN_RST);

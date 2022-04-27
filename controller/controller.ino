@@ -9,9 +9,9 @@
 #include <SparkFunLSM9DS1.h>
 
 // connection pins
-const uint8_t PIN_RST = 9; // reset pin
-const uint8_t PIN_IRQ = 2; // irq pin
-const uint8_t PIN_SS = SS; // spi select pin
+const uint8_t PIN_RST = 1; // reset pin
+const uint8_t PIN_IRQ = 7; // irq pin
+const uint8_t PIN_SS = 2; // spi select pin
 
 // messages used in the ranging protocol
 #define POLL 0
@@ -33,9 +33,9 @@ uint64_t timeRangeSent;
 byte data[LEN_DATA];
 // watchdog and reset period
 uint32_t lastActivity;
-uint32_t resetPeriod = 250;
+uint32_t resetPeriod = 100;
 // reply times (same on both sides for symm. ranging)
-uint16_t replyDelayTimeUS = 3000;
+uint16_t replyDelayTimeUS = 1000;
 
 device_configuration_t DEFAULT_CONFIG = {
     false,
@@ -43,10 +43,10 @@ device_configuration_t DEFAULT_CONFIG = {
     true,
     true,
     false,
-    SFDMode::STANDARD_SFD,
+    SFDMode::DECAWAVE_SFD,
     Channel::CHANNEL_5,
-    DataRate::RATE_850KBPS,
-    PulseFrequency::FREQ_16MHZ,
+    DataRate::RATE_6800KBPS,
+    PulseFrequency::FREQ_64MHZ,
     PreambleLength::LEN_256,
     PreambleCode::CODE_3
 };
@@ -59,33 +59,21 @@ interrupt_configuration_t DEFAULT_INTERRUPT_CONFIG = {
     true
 };
 
-
-
 /* Constants for use with transmitter */
 // Pins that we connected to CE and CSN of the transmitter
-RF24 radio(6, 7);
+RF24 radio(0, 6);
 // Address that must be matching with receivere for a connection
 const byte address[6] = "00001";
 // Buffer containing messages we wish to send
 String GyroscopeReading[1] = {""};
 
-// LED that we will use to indicate proper connection to the transmitter
-#define LED 2
-
 /* Constants for IMU readings */
 // The imu object that will provide us with gyroscope readings
 LSM9DS1 imu;
-// Speed at which wee will send gyroscope updates
-#define UPDATE_SPEED 50
-// Keep track of print time
-static unsigned long lastPrint = 0;
-
-
 
 void setup() {
-    // Setup LED indicator
-    pinMode(LED, OUTPUT);
-
+    Serial.begin(115200);
+  
     // Setup required modules
     setupIMUHelper();
     setupRadioHelper();
@@ -93,7 +81,6 @@ void setup() {
 
     
     // DEBUG monitoring
-    Serial.begin(115200);
     Serial.println(F("### DW1000Ng-arduino-ranging-tag ###"));
     // initialize the driver
     DW1000Ng::initialize(PIN_SS, PIN_IRQ, PIN_RST);
@@ -125,18 +112,14 @@ void setup() {
     noteActivity();
 }
 
-
-
 /**
  * Attempt to establish a radio connection
  */
 void setupRadioHelper()
 {
-    if (radio.begin(6, 7))
+    if (radio.begin(0, 6))
     {
         Serial.println("Connected to transmitter...");
-        // Indicate a physical successful transmitter connection
-        digitalWrite(LED, HIGH);
     }
     else
     {
@@ -156,14 +139,7 @@ void setupRadioHelper()
 void setupIMUHelper()
 {
     Wire.begin();
-
-    if (imu.begin() == false)
-    {
-        Serial.println("Failed to communicate with LSM9DS1.");
-        Serial.println("Double-check wiring.");
-        while (1)
-            ;
-    }
+    imu.begin();
 }
 
 
@@ -218,16 +194,6 @@ void transmitRange() {
 }
 
 void loop() {
-    // Wait until we can measure again
-    if ((lastPrint + UPDATE_SPEED) >= millis())
-    {
-        return;
-    }
-
-    GyroscopeReading[0] = readGyroscope();
-
-
-    
     if (!sentAck && !receivedAck) {
         // check if inactive
         if (millis() - lastActivity > resetPeriod) {
@@ -265,42 +231,47 @@ void loop() {
             transmitPoll();
             noteActivity();
 
-            float x = 5;
-            float y = 5;
-            float z = 5;
+            float x = curRange;
+            float y = 0;
+            float z = 0;
 
-            String UWBReading = String(x) + " " + String(y) + " " + String(z) + " ";
-
-            String reading = UWBReading + GyroscopeReading[0];
-
-            // Send reading to receiver
-            for (auto c : reading)
+            // Update the sensor values whenever new data is available
+            if (imu.gyroAvailable())
             {
-                radio.write(&c, sizeof(c));
+                // To read from the gyroscope,  first call the
+                // readGyro() function. When it exits, it'll update the
+                // gx, gy, and gz variables with the most current data.
+                imu.readGyro();
             }
-            // Update lastPrint time
-            lastPrint = millis();
+
+            char buff[8]; // Buffer big enough for 7-character float
+            dtostrf(x, 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(" ", sizeof(char));
+
+            dtostrf(y, 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(" ", sizeof(char));
+
+            dtostrf(z, 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(" ", sizeof(char));
+            
+            dtostrf(imu.calcGyro(imu.gx), 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(" ", sizeof(char));
+
+            dtostrf(imu.calcGyro(imu.gy), 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(" ", sizeof(char));
+
+            dtostrf(imu.calcGyro(imu.gz), 0, 2, buff);
+            radio.write(&buff, sizeof(buff));
+            radio.write(",", sizeof(char));
         } else if (msgId == RANGE_FAILED) {
             expectedMsgId = POLL_ACK;
             transmitPoll();
             noteActivity();
         }
     }
-}
-
-/**
- * Attempt to read a gyroscope reading from IMU
- */
-String readGyroscope()
-{
-    // Update the sensor values whenever new data is available
-    if (imu.gyroAvailable())
-    {
-        // To read from the gyroscope,  first call the
-        // readGyro() function. When it exits, it'll update the
-        // gx, gy, and gz variables with the most current data.
-        imu.readGyro();
-    }
-
-    return String(imu.calcGyro(imu.gx)) + " " + String(imu.calcGyro(imu.gy)) + " " + String(imu.calcGyro(imu.gz)) + ",";
 }

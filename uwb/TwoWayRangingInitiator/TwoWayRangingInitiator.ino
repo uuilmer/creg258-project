@@ -2,11 +2,16 @@
 #include <DW1000NgUtils.hpp>
 #include <DW1000NgTime.hpp>
 #include <DW1000NgConstants.hpp>
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+#include <Wire.h>
+#include <SparkFunLSM9DS1.h>
 
 // connection pins
-const uint8_t PIN_RST = 9; // reset pin
-const uint8_t PIN_IRQ = 2; // irq pin
-const uint8_t PIN_SS = SS; // spi select pin
+const uint8_t PIN_RST = 1; // reset pin
+const uint8_t PIN_IRQ = 7; // irq pin
+const uint8_t PIN_SS = 2; // spi select pin
 
 // messages used in the ranging protocol
 #define POLL 0
@@ -54,9 +59,28 @@ interrupt_configuration_t DEFAULT_INTERRUPT_CONFIG = {
     true
 };
 
+/* Constants for use with transmitter */
+// Pins that we connected to CE and CSN of the transmitter
+RF24 radio(0, 6);
+// Address that must be matching with receivere for a connection
+const byte address[6] = "00001";
+// Buffer containing messages we wish to send
+String GyroscopeReading[1] = {""};
+
+/* Constants for IMU readings */
+// The imu object that will provide us with gyroscope readings
+LSM9DS1 imu;
+
 void setup() {
-    // DEBUG monitoring
     Serial.begin(115200);
+  
+    // Setup required modules
+    setupIMUHelper();
+    setupRadioHelper();
+
+
+    
+    // DEBUG monitoring
     Serial.println(F("### DW1000Ng-arduino-ranging-tag ###"));
     // initialize the driver
     DW1000Ng::initialize(PIN_SS, PIN_IRQ, PIN_RST);
@@ -87,6 +111,38 @@ void setup() {
     transmitPoll();
     noteActivity();
 }
+
+/**
+ * Attempt to establish a radio connection
+ */
+void setupRadioHelper()
+{
+    if (radio.begin(0, 6))
+    {
+        Serial.println("Connected to transmitter...");
+    }
+    else
+    {
+        Serial.println("Failed to connect to transmitter...");
+        return;
+    }
+
+    // Setup the transmitter
+    radio.openWritingPipe(address);
+    radio.setPALevel(RF24_PA_MIN);
+    radio.stopListening();
+}
+
+/**
+ * Attempt to setup IMU for gyroscope readings
+ */
+void setupIMUHelper()
+{
+    Wire.begin();
+    imu.begin();
+}
+
+
 
 void noteActivity() {
     // update activity timestamp, so that we do not reach "resetPeriod"
@@ -174,10 +230,46 @@ void loop() {
             memcpy(&curRange, data + 1, 4);
             transmitPoll();
             noteActivity();
+
+            GyroscopeReading[0] = readGyroscope();
+
+            float x = curRange;
+            float y = 0;
+            float z = 0;
+
+            String UWBReading = String(x) + " " + String(y) + " " + String(z) + " ";
+
+            String reading = UWBReading + GyroscopeReading[0];
+            Serial.println(reading);
+
+            // Send reading to receiver
+            for (auto c : reading)
+            {
+                radio.write(&c, sizeof(c));
+            }
         } else if (msgId == RANGE_FAILED) {
             expectedMsgId = POLL_ACK;
             transmitPoll();
             noteActivity();
         }
     }
+}
+
+
+
+/**
+ * Attempt to read a gyroscope reading from IMU
+ */
+String readGyroscope()
+{
+    // Update the sensor values whenever new data is available
+    if (imu.gyroAvailable())
+    {
+        // To read from the gyroscope,  first call the
+        // readGyro() function. When it exits, it'll update the
+        // gx, gy, and gz variables with the most current data.
+        imu.readGyro();
+    }
+
+    return String(imu.calcGyro(imu.gx)) + " " + String(imu.calcGyro(imu.gy)) + " " + String(imu.calcGyro(imu.gz)) + ",";
 }
