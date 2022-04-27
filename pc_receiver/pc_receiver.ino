@@ -10,7 +10,7 @@ RF24 radio(6, 7);
 // Address that must be matching with receivere for a connection
 const byte address[6] = "00001";
 // Buffer containing messages we wish to receive
-char ReceivedGyroscopeReading[8];
+char ReceivedGyroscopeReading[1];
 
 // LED that we will use to indicate proper connection to the receiver
 #define LED 2

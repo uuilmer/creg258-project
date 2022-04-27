@@ -246,27 +246,39 @@ void loop() {
 
             char buff[8]; // Buffer big enough for 7-character float
             dtostrf(x, 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(" ", sizeof(char));
 
             dtostrf(y, 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(" ", sizeof(char));
 
             dtostrf(z, 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(" ", sizeof(char));
             
             dtostrf(imu.calcGyro(imu.gx), 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(" ", sizeof(char));
 
             dtostrf(imu.calcGyro(imu.gy), 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(" ", sizeof(char));
 
             dtostrf(imu.calcGyro(imu.gz), 0, 2, buff);
-            radio.write(&buff, sizeof(buff));
+            for (auto c : buff) {
+              radio.write(&c, sizeof(c));
+            }
             radio.write(",", sizeof(char));
         } else if (msgId == RANGE_FAILED) {
             expectedMsgId = POLL_ACK;

@@ -42,7 +42,9 @@ button.onclick = function () {
               runningInputVariable = "";
               newUSBGyroscope = [];
             } else if (c == " ") {
-              console.log(runningInputVariable);
+              if (runningInputVariable == "") {
+                continue;
+              }
               newUSBGyroscope.push(parseFloat(runningInputVariable));
               runningInputVariable = "";
             } else {
@@ -126,7 +128,7 @@ document.body.appendChild(button);
 scene.add(seedScene);
 
 // camera
-camera.position.set(0, 0, 10);
+camera.position.set(-5, 0, 0);
 camera.lookAt(new THREE.Vector3(0, 0, 0));
 
 // renderer
@@ -141,9 +143,9 @@ const updateUSBQuaterion = () => {
   }
 
   var usbPosition = {
-    x: newUSBGyroscope[2] / 100,
-    y: newUSBGyroscope[1] / 100,
-    z: newUSBGyroscope[0] / 50,
+    x: newUSBGyroscope[0] / 10,
+    y: newUSBGyroscope[1] / 10,
+    z: newUSBGyroscope[2] / 10,
   };
 
   var USBGyroscope = {
